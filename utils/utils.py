@@ -12,7 +12,7 @@ def gen_time_decay_seq(time_decay_strategy, length):
         time_decay[-days:] = np.linspace(1, intensity, days)
     time_decay /= np.mean(time_decay)
 
-def rolling_fit(fit_func, x_train, x_test, y_train):
+def rolling_fit(fit_func, x_train, x_test, y_train, y_test, window=None):
     x_past = x_train
     y_past = y_train
     y_pred_test = []
@@ -22,7 +22,9 @@ def rolling_fit(fit_func, x_train, x_test, y_train):
         for i in trg:
             x_sing = x_test[[i]]
             y_sing = y_test[[i]]
-            y_pred_sing, y_std_sing, _, _ = fit_func(x_past[-window:], x_sing, y_past[-window:])
+            if window is not None:
+                x_past_window, y_past_window = x_past[-window:], y_past[-window:]
+            y_pred_sing, y_std_sing, _, _ = fit_func(x_past_window, x_sing, y_past_window)
             y_pred_test.append(y_pred_sing[0])
             if y_std_sing is not None:
                 y_std_test.append(y_std_sing[0])

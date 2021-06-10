@@ -8,9 +8,6 @@ from __future__ import division
 import tensorflow as tf
 from six.moves import range, zip
 import numpy as np
-import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
 import zhusuan as zs
 from zhusuan.utils import merge_dicts
 from ..third_party import zs_sgmcmc
@@ -103,7 +100,6 @@ class BNNRegressor:
     bn = model.observe(**merge_dicts(latent, observed))
     y_mean = bn["y_mean"]
     self.y_pred = tf.reduce_mean(y_mean, 0)
-    # TODO: check it
     self.a_std = np.exp(y_logstd)
     self.e_std = tf.sqrt(tf.reduce_mean((y_mean - self.y_pred) ** 2, 0))
     self.nll = tf.reduce_mean((self.y_pred - y) ** 2)

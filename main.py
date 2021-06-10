@@ -1,32 +1,31 @@
-import pandas as pd
-from sklearn.metrics import explained_variance_score, r2_score, mean_squared_error
-import numpy as np
-from sklearn import ensemble
-import tqdm
-from numpy import log
-from math import sqrt
-
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import tensorflow as tf
-from six.moves import range, zip
-import zhusuan as zs
-from zhusuan.utils import merge_dicts
+import pandas as pd
+import numpy as np
 
 from utils.utils import rolling_fit, gen_time_decay_seq
-from evaluation.evaluation import volatility, get_score, model_plot
+from evaluation.evaluation import get_score, model_plot
 
 rolling = False
-window = 360
-subtract = True
+window = 360  # moving window
+subtract = True # 学习对象是否为差值
 standardize = True
 default_strategy = None  # 'final_30_20'
+day = 30 #预测T+n天后的balance
+method = 'bnn' # 'xbg' or 'bnn' or 'baseline'
+have_std = False
+support_time_decay = False
 
-day = 30
-
-method = 'bnn'
+pd_x_train = pd.read_csv('') # tain_dataset features
+pd_x_test = pd.read_csv('') # test_dataset features
+y_train = pd.read_csv('') # tain_dataset label
+y_test = pd.read_csv('') # test_dataset label
+x_train = pd_x_train.values.astype(np.float)
+x_test = pd_x_test.values.astype(np.float)
+y_prev_train = pd_x_train[''].to_numpy() # train集里n天前的balance，用于计算balance差值
+y_prev_test = pd_x_test[''].to_numpy() # test集里n天前的balance，用于计算balance差值
 
 def model_fit(model, x_train, x_test, y_train, have_std=False, time_decay_strategy=default_strategy):
     x_train, y_train = x_train[:-day], y_train[:-day]
@@ -44,29 +43,6 @@ def model_fit(model, x_train, x_test, y_train, have_std=False, time_decay_strate
         y_pred_test, y_std_test = model.predict(x_test, return_std=True)
         return y_pred_test, y_std_test, y_pred_train, y_std_train
 
-
-pd_x_train = pd.read_csv('/home/cdsw/tty_new_new/x_train.csv').drop(['act_dt'], axis=1)
-pd_x_test = pd.read_csv('/home/cdsw/tty_new_new/x_test.csv').drop(['act_dt'], axis=1)
-
-y_train = pd.read_csv(
-    '/home/cdsw/tty_new_new/y_train.csv').drop(['act_dt'], axis=1).values.squeeze()
-y_test = pd.read_csv(
-    '/home/cdsw/tty_new_new/y_test.csv').drop(['act_dt'], axis=1).values.squeeze()
-
-
-if day == 30:
-    limit = volatility(y_test) * 0.09 / 0.01186
-elif day == 7:
-    limit = volatility(y_test) * 0.07 / 0.01186
-
-
-x_train = pd_x_train.values.astype(np.float)
-x_test = pd_x_test.values.astype(np.float)
-y_prev_train = pd_x_train['ttyzl2_bal_old'].to_numpy()
-y_prev_test = pd_x_test['ttyzl2_bal_old'].to_numpy()
-
-have_std = False
-support_time_decay = False
 
 if method == 'xgb':
     from xgboost import XGBRegressor
@@ -103,7 +79,7 @@ if not rolling:
 else:
     y_pred_test, y_std_test, y_pred_train, y_std_train = rolling_fit(
         lambda x_train, x_test, y_train: model_fit(reg, x_train, x_test, y_train, have_std=have_std),
-        x_train, x_test, y_train
+        x_train, x_test, y_train, y_test, window=window
     )
 
 if standardize:
@@ -121,13 +97,13 @@ if subtract:
     y_pred_train += y_prev_train
     y_pred_test += y_prev_test
 
-score_train = get_score(y_pred_train, y_train, limit=limit)
+score_train = get_score(y_pred_train, y_train)
 model_plot(score_train, y_pred_train, y_train, y_std_train)
 if subtract:
     model_plot(score_train, y_pred_train-y_prev_train,
                y_train-y_prev_train, y_std_train)
 
-score_test = get_score(y_pred_test, y_test, limit=limit)
+score_test = get_score(y_pred_test, y_test)
 model_plot(score_test, y_pred_test, y_test, y_std_test)
 if subtract:
     model_plot(score_test, y_pred_test-y_prev_test,

@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.metrics import explained_variance_score, r2_score, mean_squared_error
 
 
 def volatility(data):
     days = len(data)
-    bal = data
-    lnbal = [log(x) for x in bal]
+    lnbal = [np.log(x) for x in data]
     diffbal = []
     for i in range(1, days):
         a = lnbal[i]-lnbal[i-1]
@@ -19,7 +20,6 @@ def get_score(pred, label, limit=None):
     rmse = np.sqrt(mean_squared_error(label, pred))
     mape = np.mean(abs(pred - label) / label)
     maxe = max(abs(pred - label) / label)
-    n = np.sum((abs(pred - label) / label) >= limit)
 
     model_metrics = {}
     model_metrics['exp_score'] = exp_score
@@ -27,8 +27,11 @@ def get_score(pred, label, limit=None):
     model_metrics['rmse'] = rmse
     model_metrics['mape'] = mape
     model_metrics['maxe'] = maxe
-    model_metrics['n'] = n
     model_metrics['detailed_error'] = abs(pred - label) / label
+
+    if limit is not None:
+        n = np.sum((abs(pred - label) / label) >= limit)
+        model_metrics['n'] = n
 
     return model_metrics
 
